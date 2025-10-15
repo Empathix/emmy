@@ -1,5 +1,8 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { Message, MessageResponse, JobPreferences } from '@/types/emmy';
+import OpenAI from 'openai';
+import { zodResponseFormat } from 'openai/helpers/zod';
+import { z } from 'zod';
 
 const EMMY_SYSTEM_PROMPT = `# Personality
 
@@ -58,10 +61,26 @@ Ask thoughtful follow-up questions to clarify needs. When you have enough inform
 
 Important: When you have enough information, your response MUST include the phrase "Let me find some great matches for you" to signal completion.`;
 
-interface ConversationMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-}
+// Zod schema for structured job preferences extraction
+const JobPreferencesSchema = z.object({
+  role: z.string().nullable().describe('Job title or role type'),
+  skills: z.array(z.string()).describe('List of skills mentioned'),
+  location: z.string().nullable().describe('City name or "Remote"'),
+  remote: z.boolean().nullable().describe('Whether remote work is desired'),
+  salary: z.object({
+    min: z.number().nullable(),
+    max: z.number().nullable(),
+    currency: z.string().default('GBP')
+  }).nullable().describe('Salary expectations'),
+  experienceYears: z.number().default(0).describe('Years of experience'),
+  preferences: z.object({
+    culturePriorities: z.array(z.string()).describe('Cultural priorities like work-life balance, growth'),
+    companySize: z.enum(['startup', 'mid-size', 'enterprise']).nullable().describe('Preferred company size'),
+    industry: z.string().nullable().describe('Preferred industry')
+  }).describe('General preferences'),
+  mustHaves: z.array(z.string()).describe('Required criteria'),
+  niceToHaves: z.array(z.string()).describe('Nice to have criteria')
+});
 
 export default async function handler(
   req: NextApiRequest,
@@ -88,8 +107,13 @@ export default async function handler(
       });
     }
 
-    // Build OpenAI messages array
-    const messages: ConversationMessage[] = [
+    // Initialize OpenAI client
+    const openai = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
+    // Build messages array
+    const messages: OpenAI.Chat.ChatCompletionMessageParam[] = [
       {
         role: 'system',
         content: EMMY_SYSTEM_PROMPT,
@@ -110,95 +134,50 @@ export default async function handler(
       content: currentMessage,
     });
 
-    // Call OpenAI API
-    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4',
-        messages,
-        temperature: 0.7,
-        max_tokens: 500,
-      }),
+    // Call OpenAI API for conversational response
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      messages,
+      temperature: 0.7,
+      max_tokens: 500,
     });
 
-    if (!openaiResponse.ok) {
-      const errorData = await openaiResponse.json().catch(() => ({}));
-      console.error('OpenAI API error:', errorData);
-      throw new Error(`OpenAI API error: ${openaiResponse.status} ${openaiResponse.statusText}`);
-    }
-
-    const openaiData = await openaiResponse.json();
-    const reply = openaiData.choices[0]?.message?.content || "I'm sorry, I didn't catch that. Could you try again?";
+    const reply = completion.choices[0]?.message?.content || "I'm sorry, I didn't catch that. Could you try again?";
 
     // Check if conversation is complete (Emmy signals ready to search)
     const isComplete = reply.toLowerCase().includes('let me find some great matches for you');
 
-    // If complete, extract preferences from conversation
+    // If complete, extract preferences using structured outputs
     let extractedData: Partial<JobPreferences> | undefined;
 
     if (isComplete) {
-      // Build extraction prompt
-      const extractionPrompt = `Based on the following conversation, extract structured job preferences in JSON format.
+      try {
+        // Build extraction prompt
+        const conversationText = conversationHistory
+          .map((msg) => `${msg.from}: ${msg.text}`)
+          .join('\n') + `\nuser: ${currentMessage}`;
 
-Conversation:
-${conversationHistory.map((msg) => `${msg.from}: ${msg.text}`).join('\n')}
-user: ${currentMessage}
-
-Extract the following if mentioned (use null if not mentioned):
-{
-  "role": "job title or role type",
-  "skills": ["skill1", "skill2"],
-  "location": "city name or 'Remote'",
-  "remote": true/false,
-  "salary": { "min": number, "max": number, "currency": "GBP" } or null,
-  "experienceYears": number or 0,
-  "preferences": {
-    "culturePriorities": ["work-life balance", "growth", etc],
-    "companySize": "startup/mid-size/enterprise" or null,
-    "industry": "tech/finance/etc" or null
-  },
-  "mustHaves": ["requirement1", "requirement2"],
-  "niceToHaves": ["preference1", "preference2"]
-}
-
-Return only valid JSON, no additional text.`;
-
-      const extractionResponse = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: 'gpt-4',
+        // Use structured outputs with Zod schema
+        const extractionCompletion = await openai.beta.chat.completions.parse({
+          model: 'gpt-4o-mini',
           messages: [
             {
-              role: 'user',
-              content: extractionPrompt,
+              role: 'system',
+              content: 'You are a helpful assistant that extracts job preferences from conversations. Extract all mentioned details accurately.'
             },
+            {
+              role: 'user',
+              content: `Based on the following conversation, extract structured job preferences:\n\n${conversationText}\n\nExtract all relevant information about role, skills, location, salary, experience, and preferences.`
+            }
           ],
+          response_format: zodResponseFormat(JobPreferencesSchema, 'job_preferences'),
           temperature: 0.3,
-          max_tokens: 1000,
-        }),
-      });
+        });
 
-      if (extractionResponse.ok) {
-        const extractionData = await extractionResponse.json();
-        const extractedText = extractionData.choices[0]?.message?.content;
-
-        try {
-          // Parse JSON from the response
-          const jsonMatch = extractedText.match(/\{[\s\S]*\}/);
-          if (jsonMatch) {
-            extractedData = JSON.parse(jsonMatch[0]);
-          }
-        } catch (parseError) {
-          console.error('Failed to parse extracted preferences:', parseError);
-        }
+        extractedData = extractionCompletion.choices[0]?.message?.parsed || undefined;
+      } catch (parseError) {
+        console.error('Failed to extract preferences with structured outputs:', parseError);
+        // Continue without extracted data
       }
     }
 

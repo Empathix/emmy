@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { Phone, Sparkles, Volume2 } from 'lucide-react';
+import { Phone, Volume2 } from 'lucide-react';
 import { FadeIn } from '@/components/FadeIn';
 import { EmmyHeader } from '@/components/emmy/EmmyHeader';
 import { VoiceWave } from '@/components/emmy/VoiceWave';
@@ -158,31 +158,67 @@ export default function EmmyVoice() {
         <div className="flex-1 flex items-center justify-center px-6 py-16">
           <div className="max-w-3xl w-full">
             <FadeIn>
-              {/* Email Confirmation */}
+              {/* Thank You / Confirmation Page */}
               {isConfirmed && (
                 <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden p-12">
                   <div className="flex flex-col items-center text-center">
-                    <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-6">
-                      <Sparkles className="w-10 h-10 text-green-600" />
+                    {/* Success Icon */}
+                    <div className="w-24 h-24 rounded-full bg-gradient-to-br from-green-100 to-green-200 flex items-center justify-center mb-6 shadow-lg">
+                      <svg className="w-12 h-12 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
                     </div>
-                    <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                      We'll be in touch!
+
+                    {/* Headline */}
+                    <h2 className="text-4xl font-bold text-gray-900 mb-4">
+                      All set! 🎉
                     </h2>
-                    <p className="text-lg text-gray-600 mb-2">
-                      Emmy will send up to 5 relevant jobs to
+
+                    {/* Description */}
+                    <p className="text-lg text-gray-600 mb-6 max-w-md">
+                      Emmy is searching for your perfect matches right now. You'll receive up to 5 personalized job recommendations within 24 hours.
                     </p>
-                    <p className="text-lg font-semibold text-purple-600 mb-6">
-                      {email}
-                    </p>
-                    <p className="text-sm text-gray-500 mb-8">
-                      within the next 24 hours
-                    </p>
-                    <button
-                      onClick={startConversation}
-                      className="px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
-                    >
-                      Start New Search
-                    </button>
+
+                    {/* Email Display */}
+                    <div className="bg-purple-50 rounded-xl px-6 py-4 mb-8">
+                      <p className="text-sm text-gray-600 mb-1">We'll send them to:</p>
+                      <p className="text-lg font-semibold text-purple-600">{email}</p>
+                    </div>
+
+                    {/* What's Next */}
+                    <div className="bg-gray-50 rounded-xl p-6 mb-8 max-w-md w-full text-left">
+                      <h3 className="text-lg font-semibold text-gray-900 mb-3">What happens next?</h3>
+                      <ul className="space-y-2 text-sm text-gray-600">
+                        <li className="flex items-start gap-2">
+                          <span className="text-purple-600 mt-0.5">✓</span>
+                          <span>Emmy searches across major job boards and our network</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-purple-600 mt-0.5">✓</span>
+                          <span>Each match includes why it's a good fit for you</span>
+                        </li>
+                        <li className="flex items-start gap-2">
+                          <span className="text-purple-600 mt-0.5">✓</span>
+                          <span>Apply directly from your email with one click</span>
+                        </li>
+                      </ul>
+                    </div>
+
+                    {/* CTA Buttons */}
+                    <div className="flex gap-4">
+                      <button
+                        onClick={startConversation}
+                        className="px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+                      >
+                        Start New Search
+                      </button>
+                      <a
+                        href="/emmy"
+                        className="px-6 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 transition-all"
+                      >
+                        Back to Home
+                      </a>
+                    </div>
                   </div>
                 </div>
               )}

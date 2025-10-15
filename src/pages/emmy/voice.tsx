@@ -16,6 +16,8 @@ export default function EmmyVoice() {
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
+  const [jobCount, setJobCount] = useState(10000); // Start with high number
+  const [isFiltering, setIsFiltering] = useState(false);
 
   const conversation = useConversation({
     onConnect: () => {
@@ -55,6 +57,38 @@ export default function EmmyVoice() {
             text: message.message,
           },
         ]);
+
+        // Simulate job filtering as Emmy learns more
+        // Reduce job count based on conversation progress
+        const responseText = message.message.toLowerCase();
+
+        // Filter jobs as Emmy gathers specific criteria
+        if (responseText.includes('role') || responseText.includes('position') || responseText.includes('job')) {
+          setIsFiltering(true);
+          setTimeout(() => {
+            setJobCount((prev) => Math.max(50, Math.floor(prev * 0.6))); // Reduce by 40%
+            setIsFiltering(false);
+          }, 800);
+        } else if (responseText.includes('location') || responseText.includes('remote')) {
+          setIsFiltering(true);
+          setTimeout(() => {
+            setJobCount((prev) => Math.max(50, Math.floor(prev * 0.7))); // Reduce by 30%
+            setIsFiltering(false);
+          }, 800);
+        } else if (responseText.includes('salary') || responseText.includes('experience')) {
+          setIsFiltering(true);
+          setTimeout(() => {
+            setJobCount((prev) => Math.max(50, Math.floor(prev * 0.8))); // Reduce by 20%
+            setIsFiltering(false);
+          }, 800);
+        } else if (transcript.length > 4) {
+          // General reduction for ongoing conversation
+          setIsFiltering(true);
+          setTimeout(() => {
+            setJobCount((prev) => Math.max(50, Math.floor(prev * 0.9))); // Reduce by 10%
+            setIsFiltering(false);
+          }, 800);
+        }
       }
 
       // Track if Emmy is speaking
@@ -341,6 +375,31 @@ export default function EmmyVoice() {
                     <div className="mt-4 flex items-center gap-2 px-4 py-2 bg-purple-100 rounded-full">
                       <Volume2 className="w-4 h-4 text-purple-600 animate-pulse" />
                       <span className="text-sm text-purple-900 font-medium">Emmy is speaking...</span>
+                    </div>
+                  )}
+
+                  {/* Live Job Counter - shows progress */}
+                  {isListening && transcript.length > 0 && (
+                    <div className="mt-6 w-full max-w-md">
+                      <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-4 border border-purple-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm font-medium text-gray-700">
+                            {isFiltering ? 'Filtering matches...' : 'Potential matches'}
+                          </span>
+                          <span className={`text-2xl font-bold ${isFiltering ? 'text-purple-600 animate-pulse' : 'text-purple-600'}`}>
+                            {jobCount.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+                          <div
+                            className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all duration-1000 ease-out"
+                            style={{ width: `${Math.max(5, 100 - (jobCount / 100))}%` }}
+                          />
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2 text-center">
+                          Emmy is narrowing down the best options for you
+                        </p>
+                      </div>
                     </div>
                   )}
 

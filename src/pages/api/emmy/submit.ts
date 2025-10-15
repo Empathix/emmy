@@ -45,6 +45,7 @@ export default async function handler(
     };
 
     // Save to Vercel Blob Storage
+    // Note: URLs are unguessable random strings, making them effectively private
     const blob = await put(
       `emmy-submissions/${submissionId}.json`,
       JSON.stringify(submissionData, null, 2),

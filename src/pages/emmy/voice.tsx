@@ -36,16 +36,17 @@ export default function EmmyVoice() {
       console.log('Message:', message);
 
       // Handle different message types
-      if (message.type === 'user_transcript') {
+      const msg = message as any; // Type cast to handle ElevenLabs message structure
+      if (msg.type === 'user_transcript') {
         // User spoke
         setTranscript((prev) => [
           ...prev,
           {
             speaker: 'user',
-            text: message.message,
+            text: msg.message || message.message,
           },
         ]);
-      } else if (message.type === 'agent_response') {
+      } else if (msg.type === 'agent_response') {
         // Emmy responded
         setTranscript((prev) => [
           ...prev,
@@ -57,15 +58,15 @@ export default function EmmyVoice() {
       }
 
       // Track if Emmy is speaking
-      if (message.type === 'audio') {
+      if (msg.type === 'audio') {
         setIsSpeaking(true);
-      } else if (message.type === 'agent_response_end') {
+      } else if (msg.type === 'agent_response_end') {
         setIsSpeaking(false);
       }
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('ElevenLabs error:', error);
-      setError(error.message || 'Connection error occurred');
+      setError(typeof error === 'string' ? error : (error?.message || 'Connection error occurred'));
     },
   });
 

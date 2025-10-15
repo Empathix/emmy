@@ -56,29 +56,75 @@ export default async function handler(
 
     console.log('Submission saved to Blob Storage:', blob.url);
 
-    // Log the submission details for monitoring
+    // Send Slack notification
     try {
-      const emailBody = `
-New Emmy Submission!
+      const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
 
-Submission ID: ${submissionId}
-Email: ${email}
-LinkedIn: ${linkedinUrl}
-Timestamp: ${timestamp}
+      if (slackWebhookUrl) {
+        const slackMessage = {
+          text: '🎉 New Emmy Submission!',
+          blocks: [
+            {
+              type: 'header',
+              text: {
+                type: 'plain_text',
+                text: '🎉 New Emmy Submission',
+                emoji: true
+              }
+            },
+            {
+              type: 'section',
+              fields: [
+                {
+                  type: 'mrkdwn',
+                  text: `*Email:*\n${email}`
+                },
+                {
+                  type: 'mrkdwn',
+                  text: `*LinkedIn:*\n<${linkedinUrl}|View Profile>`
+                },
+                {
+                  type: 'mrkdwn',
+                  text: `*Submission ID:*\n${submissionId}`
+                },
+                {
+                  type: 'mrkdwn',
+                  text: `*Timestamp:*\n${new Date(timestamp).toLocaleString()}`
+                }
+              ]
+            },
+            {
+              type: 'section',
+              text: {
+                type: 'mrkdwn',
+                text: `<${blob.url}|View in Blob Storage>`
+              }
+            }
+          ]
+        };
 
-View in Blob Storage: ${blob.url}
-      `.trim();
+        await fetch(slackWebhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(slackMessage),
+        });
 
+        console.log('Slack notification sent successfully');
+      } else {
+        console.log('No SLACK_WEBHOOK_URL configured - skipping Slack notification');
+      }
+
+      // Also log to console as backup
       console.log('=== NEW EMMY SUBMISSION ===');
-      console.log(emailBody);
+      console.log(`Email: ${email}`);
+      console.log(`LinkedIn: ${linkedinUrl}`);
+      console.log(`Submission ID: ${submissionId}`);
+      console.log(`Blob Storage: ${blob.url}`);
       console.log('===========================');
 
-      // TODO: Integrate with your email service (SendGrid, Resend, etc.)
-      // to send notification to olivia@empathix.com
-
-    } catch (emailError) {
-      console.error('Failed to log submission:', emailError);
-      // Don't fail the request if logging fails
+    } catch (notificationError) {
+      console.error('Failed to send notification:', notificationError);
+      // Don't fail the request if notification fails
     }
 
     return res.status(200).json({

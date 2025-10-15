@@ -16,7 +16,7 @@ export default function EmmyVoice() {
   const [linkedinUrl, setLinkedinUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
-  const [jobCount, setJobCount] = useState(10000); // Start with high number
+  const [jobCount, setJobCount] = useState(400); // Current jobs in NZ/Australia
   const [isFiltering, setIsFiltering] = useState(false);
 
   const conversation = useConversation({
@@ -66,26 +66,26 @@ export default function EmmyVoice() {
         if (responseText.includes('role') || responseText.includes('position') || responseText.includes('job')) {
           setIsFiltering(true);
           setTimeout(() => {
-            setJobCount((prev) => Math.max(50, Math.floor(prev * 0.6))); // Reduce by 40%
+            setJobCount((prev) => Math.max(10, Math.floor(prev * 0.6))); // Reduce by 40%
             setIsFiltering(false);
           }, 800);
         } else if (responseText.includes('location') || responseText.includes('remote')) {
           setIsFiltering(true);
           setTimeout(() => {
-            setJobCount((prev) => Math.max(50, Math.floor(prev * 0.7))); // Reduce by 30%
+            setJobCount((prev) => Math.max(10, Math.floor(prev * 0.7))); // Reduce by 30%
             setIsFiltering(false);
           }, 800);
         } else if (responseText.includes('salary') || responseText.includes('experience')) {
           setIsFiltering(true);
           setTimeout(() => {
-            setJobCount((prev) => Math.max(50, Math.floor(prev * 0.8))); // Reduce by 20%
+            setJobCount((prev) => Math.max(10, Math.floor(prev * 0.8))); // Reduce by 20%
             setIsFiltering(false);
           }, 800);
         } else if (transcript.length > 4) {
           // General reduction for ongoing conversation
           setIsFiltering(true);
           setTimeout(() => {
-            setJobCount((prev) => Math.max(50, Math.floor(prev * 0.9))); // Reduce by 10%
+            setJobCount((prev) => Math.max(10, Math.floor(prev * 0.9))); // Reduce by 10%
             setIsFiltering(false);
           }, 800);
         }

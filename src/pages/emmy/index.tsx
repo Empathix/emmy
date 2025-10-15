@@ -48,7 +48,7 @@ export default function EmmyLanding() {
             </div>
 
             {/* How It Works Section */}
-            <div className="max-w-6xl mx-auto text-center">
+            <div className="max-w-6xl mx-auto text-center px-4">
               <h2 className="text-4xl font-bold text-gray-900 mb-4">
                 How It Works
               </h2>
@@ -56,8 +56,8 @@ export default function EmmyLanding() {
                 Find your perfect role in three simple steps
               </p>
 
-              <div className="grid md:grid-cols-3 gap-12 text-left">
-                <div className="relative">
+              <div className="grid md:grid-cols-3 gap-12 text-left justify-items-center">
+                <div className="relative max-w-sm w-full">
                   <div className="inline-flex items-center gap-2 bg-purple-100 px-3 py-1 rounded-full mb-4">
                     <span className="text-sm font-semibold text-purple-700">Step 1</span>
                   </div>
@@ -72,7 +72,7 @@ export default function EmmyLanding() {
                   </p>
                 </div>
 
-                <div className="relative">
+                <div className="relative max-w-sm w-full">
                   <div className="inline-flex items-center gap-2 bg-purple-100 px-3 py-1 rounded-full mb-4">
                     <span className="text-sm font-semibold text-purple-700">Step 2</span>
                   </div>
@@ -87,7 +87,7 @@ export default function EmmyLanding() {
                   </p>
                 </div>
 
-                <div className="relative">
+                <div className="relative max-w-sm w-full">
                   <div className="inline-flex items-center gap-2 bg-purple-100 px-3 py-1 rounded-full mb-4">
                     <span className="text-sm font-semibold text-purple-700">Step 3</span>
                   </div>

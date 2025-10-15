@@ -1,0 +1,367 @@
+import React, { useState, useCallback } from 'react';
+import { Phone, Sparkles, Volume2 } from 'lucide-react';
+import { FadeIn } from '@/components/FadeIn';
+import { EmmyHeader } from '@/components/emmy/EmmyHeader';
+import { VoiceWave } from '@/components/emmy/VoiceWave';
+import { TranscriptDisplay } from '@/components/emmy/TranscriptDisplay';
+import Head from 'next/head';
+import Link from 'next/link';
+import { useConversation } from '@elevenlabs/react';
+
+export default function EmmyVoice() {
+  const [transcript, setTranscript] = useState<Array<{ speaker: string; text: string }>>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [email, setEmail] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isConfirmed, setIsConfirmed] = useState(false);
+
+  const conversation = useConversation({
+    onConnect: () => {
+      console.log('Connected to ElevenLabs');
+      setError(null);
+      // Add initial Emmy greeting to transcript
+      setTranscript([
+        {
+          speaker: 'emmy',
+          text: "Hi! I'm Emmy. Tell me about your dream job and what matters most to you in your career.",
+        },
+      ]);
+    },
+    onDisconnect: () => {
+      console.log('Disconnected from ElevenLabs');
+    },
+    onMessage: (message) => {
+      console.log('Message:', message);
+
+      // Handle different message types
+      if (message.type === 'user_transcript') {
+        // User spoke
+        setTranscript((prev) => [
+          ...prev,
+          {
+            speaker: 'user',
+            text: message.message,
+          },
+        ]);
+      } else if (message.type === 'agent_response') {
+        // Emmy responded
+        setTranscript((prev) => [
+          ...prev,
+          {
+            speaker: 'emmy',
+            text: message.message,
+          },
+        ]);
+      }
+
+      // Track if Emmy is speaking
+      if (message.type === 'audio') {
+        setIsSpeaking(true);
+      } else if (message.type === 'agent_response_end') {
+        setIsSpeaking(false);
+      }
+    },
+    onError: (error) => {
+      console.error('ElevenLabs error:', error);
+      setError(error.message || 'Connection error occurred');
+    },
+  });
+
+  const handleEndConversation = useCallback(async () => {
+    // End the conversation
+    await conversation.endSession();
+    setIsSpeaking(false);
+
+    // Show email form instead of searching immediately
+    setShowEmailForm(true);
+  }, [conversation]);
+
+  const startConversation = useCallback(async () => {
+    try {
+      setError(null);
+      setShowEmailForm(false);
+      setIsConfirmed(false);
+
+      // Request microphone access
+      await navigator.mediaDevices.getUserMedia({ audio: true });
+
+      // Start the conversation with your agent
+      await conversation.startSession({
+        agentId: 'agent_1701k76s0z7dfnkb2pjzj16sykqm',
+        connectionType: 'webrtc',
+      });
+    } catch (err: any) {
+      console.error('Error starting conversation:', err);
+      setError(
+        err.message || 'Failed to start voice conversation. Make sure your microphone is enabled.'
+      );
+    }
+  }, [conversation]);
+
+  const stopConversation = useCallback(async () => {
+    await handleEndConversation();
+  }, [handleEndConversation]);
+
+  const handleEmailSubmit = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      // Send email + transcript to Vercel Blob Storage
+      const response = await fetch('/api/emmy/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          transcript,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.message || 'Failed to submit');
+      }
+
+      console.log('Submission successful:', data.submissionId);
+      setIsConfirmed(true);
+    } catch (err) {
+      console.error('Error submitting email:', err);
+      setError('Failed to submit. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [email, transcript]);
+
+  const isListening = conversation.status === 'connected';
+
+  return (
+    <>
+      <Head>
+        <title>Emmy Voice | Empathix</title>
+      </Head>
+
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 flex flex-col">
+        <EmmyHeader
+          variant="app"
+          showBackButton={true}
+          title="Emmy Voice"
+          subtitle="Your Career Partner"
+        />
+
+        {/* Main Content */}
+        <div className="flex-1 flex items-center justify-center px-6 py-16">
+          <div className="max-w-3xl w-full">
+            <FadeIn>
+              {/* Email Confirmation */}
+              {isConfirmed && (
+                <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden p-12">
+                  <div className="flex flex-col items-center text-center">
+                    <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-6">
+                      <Sparkles className="w-10 h-10 text-green-600" />
+                    </div>
+                    <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                      We'll be in touch!
+                    </h2>
+                    <p className="text-lg text-gray-600 mb-2">
+                      Emmy will send up to 5 relevant jobs to
+                    </p>
+                    <p className="text-lg font-semibold text-purple-600 mb-6">
+                      {email}
+                    </p>
+                    <p className="text-sm text-gray-500 mb-8">
+                      within the next 24 hours
+                    </p>
+                    <button
+                      onClick={startConversation}
+                      className="px-6 py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all"
+                    >
+                      Start New Search
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Email Form */}
+              {showEmailForm && !isConfirmed && (
+                <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden p-12">
+                  <div className="text-center mb-8">
+                    <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                      Thanks for chatting!
+                    </h2>
+                    <p className="text-lg text-gray-600">
+                      Where should Emmy send your personalized job matches?
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleEmailSubmit} className="max-w-md mx-auto">
+                    <div className="mb-6">
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="your.email@example.com"
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg"
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full px-6 py-4 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed text-lg"
+                    >
+                      {isSubmitting ? 'Submitting...' : 'Send me up to 5 jobs in 24hr'}
+                    </button>
+
+                    <p className="text-xs text-gray-500 text-center mt-4">
+                      We'll only use your email to send you job matches. No spam, promise!
+                    </p>
+                  </form>
+                </div>
+              )}
+
+              {/* Voice Interface */}
+              {!showEmailForm && !isConfirmed && (
+                <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden p-12">
+                {/* Voice Control */}
+                <div className="flex flex-col items-center mb-12">
+                  {/* Main Call Button */}
+                  <button
+                    onClick={isListening ? stopConversation : startConversation}
+                    className="relative mb-6 group"
+                    disabled={conversation.status === 'connecting'}
+                  >
+                    <div
+                      className={`w-32 h-32 rounded-full flex items-center justify-center shadow-2xl transition-all ${
+                        isListening
+                          ? 'bg-gradient-to-br from-purple-500 to-blue-500 animate-pulse'
+                          : conversation.status === 'connecting'
+                          ? 'bg-gradient-to-br from-gray-400 to-gray-500 animate-pulse'
+                          : 'bg-gradient-to-br from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600'
+                      }`}
+                    >
+                      {isListening ? (
+                        <Phone className="w-12 h-12 text-white" />
+                      ) : (
+                        <Phone className="w-12 h-12 text-white" />
+                      )}
+                    </div>
+
+                    {/* Ripple effect when listening */}
+                    {isListening && (
+                      <>
+                        <div className="absolute inset-0 rounded-full bg-purple-400 opacity-40 animate-ping" />
+                        <div
+                          className="absolute inset-0 rounded-full bg-purple-300 opacity-30 animate-ping"
+                          style={{ animationDelay: '0.5s' }}
+                        />
+                      </>
+                    )}
+                  </button>
+
+                  {/* Status Text */}
+                  <div className="text-center">
+                    <p className="text-xl font-semibold text-gray-900 mb-1">
+                      {conversation.status === 'connecting'
+                        ? 'Connecting...'
+                        : isListening
+                        ? 'Emmy is listening...'
+                        : 'Click to start'}
+                    </p>
+                    <p className="text-sm text-gray-600">
+                      {isListening
+                        ? 'Speak naturally about your ideal job'
+                        : conversation.status === 'connecting'
+                        ? 'Setting up your conversation...'
+                        : 'Start a voice conversation with Emmy'}
+                    </p>
+                  </div>
+
+                  {/* Speaking Indicator */}
+                  {isSpeaking && (
+                    <div className="mt-4 flex items-center gap-2 px-4 py-2 bg-purple-100 rounded-full">
+                      <Volume2 className="w-4 h-4 text-purple-600 animate-pulse" />
+                      <span className="text-sm text-purple-900 font-medium">Emmy is speaking...</span>
+                    </div>
+                  )}
+
+                  {/* Manual End Button */}
+                  {isListening && (
+                    <button
+                      onClick={stopConversation}
+                      className="mt-6 px-6 py-2 bg-white border-2 border-purple-500 text-purple-600 rounded-xl font-semibold hover:bg-purple-50 transition-all"
+                    >
+                      End & Find Matches
+                    </button>
+                  )}
+                </div>
+
+                {/* Voice Wave Visualization */}
+                {isListening && (
+                  <div className="mb-8">
+                    <VoiceWave barCount={30} animated={true} />
+                  </div>
+                )}
+
+                {/* Error Message */}
+                {error && (
+                  <div className="mb-6 bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+                    <p className="text-sm text-red-900">
+                      <span className="font-semibold">Error:</span> {error}
+                    </p>
+                    <p className="text-xs text-red-700 mt-1">
+                      Make sure you have microphone permissions enabled and ELEVENLABS_API_KEY is
+                      configured.
+                    </p>
+                  </div>
+                )}
+
+                {/* Transcript */}
+                <TranscriptDisplay transcript={transcript} variant="default" />
+
+                {/* Instructions */}
+                {!isListening && transcript.length === 0 && (
+                  <div className="text-center text-gray-600">
+                    <h3 className="font-semibold text-gray-900 mb-3">How it works:</h3>
+                    <ol className="text-sm space-y-2 text-left max-w-md mx-auto">
+                      <li className="flex items-start gap-2">
+                        <span className="font-semibold text-purple-600">1.</span>
+                        <span>Click the call button to start talking with Emmy</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-semibold text-purple-600">2.</span>
+                        <span>Tell Emmy about your ideal role, skills, and what matters to you</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="font-semibold text-purple-600">3.</span>
+                        <span>When you're ready, click "Find My Matches" to see personalized jobs</span>
+                      </li>
+                    </ol>
+                  </div>
+                )}
+              </div>
+              )}
+
+              {/* Note about demo */}
+              {!showEmailForm && !isConfirmed && (
+                <div className="mt-6 text-center">
+                  <p className="text-xs text-gray-500">
+                    Want to see the full experience?{' '}
+                    <Link href="/emmy/demo" className="text-purple-600 hover:text-purple-700 underline">
+                      Try the visual demo
+                    </Link>{' '}
+                    instead.
+                  </p>
+                </div>
+              )}
+            </FadeIn>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}

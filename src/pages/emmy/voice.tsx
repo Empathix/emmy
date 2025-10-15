@@ -378,30 +378,6 @@ export default function EmmyVoice() {
                     </div>
                   )}
 
-                  {/* Live Job Counter - shows progress */}
-                  {isListening && transcript.length > 0 && (
-                    <div className="mt-6 w-full max-w-md">
-                      <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-xl p-4 border border-purple-200">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-gray-700">
-                            {isFiltering ? 'Filtering matches...' : 'Potential matches'}
-                          </span>
-                          <span className={`text-2xl font-bold ${isFiltering ? 'text-purple-600 animate-pulse' : 'text-purple-600'}`}>
-                            {jobCount.toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-                          <div
-                            className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all duration-1000 ease-out"
-                            style={{ width: `${Math.max(5, 100 - (jobCount / 100))}%` }}
-                          />
-                        </div>
-                        <p className="text-xs text-gray-500 mt-2 text-center">
-                          Emmy is narrowing down the best options for you
-                        </p>
-                      </div>
-                    </div>
-                  )}
 
                   {/* Manual End Button */}
                   {isListening && (
@@ -434,8 +410,37 @@ export default function EmmyVoice() {
                   </div>
                 )}
 
-                {/* Transcript */}
-                <TranscriptDisplay transcript={transcript} variant="default" />
+                {/* Live Job Counter - replaces transcript */}
+                {isListening && transcript.length > 0 ? (
+                  <div className="mb-8">
+                    <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-8 border border-purple-200 max-w-2xl mx-auto">
+                      <div className="text-center mb-6">
+                        <div className="inline-block bg-white rounded-full px-4 py-1 mb-4">
+                          <span className="text-sm font-medium text-gray-600">
+                            {isFiltering ? '🔍 Filtering matches...' : '📊 Current matches'}
+                          </span>
+                        </div>
+                        <div className={`text-6xl font-bold mb-2 ${isFiltering ? 'text-purple-600 animate-pulse' : 'text-purple-600'}`}>
+                          {jobCount.toLocaleString()}
+                        </div>
+                        <p className="text-lg text-gray-600">jobs found in NZ & Australia</p>
+                      </div>
+
+                      <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden mb-4">
+                        <div
+                          className="bg-gradient-to-r from-purple-500 to-blue-500 h-3 rounded-full transition-all duration-1000 ease-out"
+                          style={{ width: `${Math.max(5, ((400 - jobCount) / 390) * 100)}%` }}
+                        />
+                      </div>
+
+                      <p className="text-sm text-gray-600 text-center">
+                        Emmy is narrowing down the best options for you as you talk
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <TranscriptDisplay transcript={transcript} variant="default" />
+                )}
 
                 {/* Instructions */}
                 {!isListening && transcript.length === 0 && (

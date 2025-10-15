@@ -13,6 +13,7 @@ export default function EmmyVoice() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [email, setEmail] = useState('');
+  const [linkedinUrl, setLinkedinUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
 
@@ -110,12 +111,13 @@ export default function EmmyVoice() {
     setError(null);
 
     try {
-      // Send email + transcript to Vercel Blob Storage
+      // Send email, LinkedIn + transcript to Vercel Blob Storage
       const response = await fetch('/api/emmy/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email,
+          linkedinUrl,
           transcript,
         }),
       });
@@ -134,7 +136,7 @@ export default function EmmyVoice() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [email, transcript]);
+  }, [email, linkedinUrl, transcript]);
 
   const isListening = conversation.status === 'connected';
 
@@ -198,12 +200,29 @@ export default function EmmyVoice() {
                   </div>
 
                   <form onSubmit={handleEmailSubmit} className="max-w-md mx-auto">
-                    <div className="mb-6">
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Email Address
+                      </label>
                       <input
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="your.email@example.com"
+                        required
+                        className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg"
+                      />
+                    </div>
+
+                    <div className="mb-6">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        LinkedIn Profile URL
+                      </label>
+                      <input
+                        type="url"
+                        value={linkedinUrl}
+                        onChange={(e) => setLinkedinUrl(e.target.value)}
+                        placeholder="https://linkedin.com/in/yourprofile"
                         required
                         className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent text-lg"
                       />
@@ -218,7 +237,7 @@ export default function EmmyVoice() {
                     </button>
 
                     <p className="text-xs text-gray-500 text-center mt-4">
-                      We'll only use your email to send you job matches. No spam, promise!
+                      We'll only use your info to send you job matches. No spam, promise!
                     </p>
                   </form>
                 </div>

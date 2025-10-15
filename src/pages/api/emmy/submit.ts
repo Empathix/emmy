@@ -3,7 +3,8 @@ import { put } from '@vercel/blob';
 
 interface SubmissionRequest {
   email: string;
-  transcript: Array<{ speaker: string; text: string }>;
+  linkedinUrl: string;
+  transcript?: Array<{ speaker: string; text: string }>; // Optional, not saved
 }
 
 interface SubmissionResponse {
@@ -20,12 +21,12 @@ export default async function handler(
     return res.status(405).json({ success: false, message: 'Method not allowed' });
   }
 
-  const { email, transcript } = req.body as SubmissionRequest;
+  const { email, linkedinUrl } = req.body as SubmissionRequest;
 
-  if (!email || !transcript) {
+  if (!email || !linkedinUrl) {
     return res.status(400).json({
       success: false,
-      message: 'Email and transcript are required'
+      message: 'Email and LinkedIn URL are required'
     });
   }
 
@@ -38,7 +39,7 @@ export default async function handler(
     const submissionData = {
       submissionId,
       email,
-      transcript,
+      linkedinUrl,
       timestamp,
       status: 'pending', // pending, processed, emailed
     };
@@ -55,6 +56,31 @@ export default async function handler(
 
     console.log('Submission saved to Blob Storage:', blob.url);
 
+    // Log the submission details for monitoring
+    try {
+      const emailBody = `
+New Emmy Submission!
+
+Submission ID: ${submissionId}
+Email: ${email}
+LinkedIn: ${linkedinUrl}
+Timestamp: ${timestamp}
+
+View in Blob Storage: ${blob.url}
+      `.trim();
+
+      console.log('=== NEW EMMY SUBMISSION ===');
+      console.log(emailBody);
+      console.log('===========================');
+
+      // TODO: Integrate with your email service (SendGrid, Resend, etc.)
+      // to send notification to olivia@empathix.com
+
+    } catch (emailError) {
+      console.error('Failed to log submission:', emailError);
+      // Don't fail the request if logging fails
+    }
+
     return res.status(200).json({
       success: true,
       message: 'Submission received! Emmy will send you jobs within 24 hours.',
@@ -66,7 +92,7 @@ export default async function handler(
     // Fallback: Log to console for manual collection
     console.log('FALLBACK - Emmy Submission:', {
       email,
-      transcriptLength: transcript.length,
+      linkedinUrl,
       timestamp: new Date().toISOString(),
     });
 

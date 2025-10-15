@@ -5,7 +5,6 @@ import { EmmyHeader } from '@/components/emmy/EmmyHeader';
 import { VoiceWave } from '@/components/emmy/VoiceWave';
 import { TranscriptDisplay } from '@/components/emmy/TranscriptDisplay';
 import Head from 'next/head';
-import Link from 'next/link';
 import { useConversation } from '@elevenlabs/react';
 
 export default function EmmyVoice() {
@@ -347,18 +346,6 @@ export default function EmmyVoice() {
               </div>
               )}
 
-              {/* Note about demo */}
-              {!showEmailForm && !isConfirmed && (
-                <div className="mt-6 text-center">
-                  <p className="text-xs text-gray-500">
-                    Want to see the full experience?{' '}
-                    <Link href="/emmy/demo" className="text-purple-600 hover:text-purple-700 underline">
-                      Try the visual demo
-                    </Link>{' '}
-                    instead.
-                  </p>
-                </div>
-              )}
             </FadeIn>
           </div>
         </div>

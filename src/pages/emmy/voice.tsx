@@ -434,7 +434,13 @@ export default function EmmyVoice() {
                       </div>
 
                       <p className="text-sm text-gray-600 text-center">
-                        Emmy is narrowing down the best options for you as you talk
+                        {transcript.length <= 2
+                          ? "Emmy is learning what you're looking for..."
+                          : transcript.length <= 5
+                          ? "Getting clearer on your ideal role..."
+                          : transcript.length <= 8
+                          ? "Almost ready to find your matches..."
+                          : "Finalizing your preferences..."}
                       </p>
                     </div>
                   </div>

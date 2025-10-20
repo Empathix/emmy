@@ -1,10 +1,19 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { put } from '@vercel/blob';
+import { put, head } from '@vercel/blob';
 
 interface SubmissionRequest {
   email: string;
   linkedinUrl: string;
-  transcript?: Array<{ speaker: string; text: string }>; // Optional, not saved
+  transcript?: Array<{ speaker: string; text: string }>; // NOW SAVED!
+}
+
+interface SubmissionData {
+  submissionId: string;
+  email: string;
+  linkedinUrl: string;
+  transcript: Array<{ speaker: string; text: string }>;
+  timestamp: string;
+  status: string;
 }
 
 interface SubmissionResponse {
@@ -21,7 +30,7 @@ export default async function handler(
     return res.status(405).json({ success: false, message: 'Method not allowed' });
   }
 
-  const { email, linkedinUrl } = req.body as SubmissionRequest;
+  const { email, linkedinUrl, transcript } = req.body as SubmissionRequest;
 
   if (!email || !linkedinUrl) {
     return res.status(400).json({
@@ -35,33 +44,59 @@ export default async function handler(
     const submissionId = `emmy_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const timestamp = new Date().toISOString();
 
-    // Prepare the submission data
-    const submissionData = {
+    // Prepare the NEW submission data (with transcript!)
+    const newSubmission: SubmissionData = {
       submissionId,
       email,
       linkedinUrl,
+      transcript: transcript || [],
       timestamp,
       status: 'pending', // pending, processed, emailed
     };
 
-    // Save to Vercel Blob Storage
-    // Note: URLs are unguessable random strings, making them effectively private
+    // Fetch existing submissions from unified file
+    let allSubmissions: SubmissionData[] = [];
+    const unifiedFilePath = 'emmy-submissions.json';
+
+    try {
+      // Check if file exists
+      const existingBlob = await head(unifiedFilePath);
+      if (existingBlob) {
+        // Download existing submissions
+        const response = await fetch(existingBlob.url);
+        const data = await response.json();
+        allSubmissions = data.submissions || [];
+      }
+    } catch (error) {
+      // File doesn't exist yet, start with empty array
+      console.log('No existing submissions file, creating new one');
+    }
+
+    // Add new submission to array
+    allSubmissions.push(newSubmission);
+
+    // Save unified file with ALL submissions
     const blob = await put(
-      `emmy-submissions/${submissionId}.json`,
-      JSON.stringify(submissionData, null, 2),
+      unifiedFilePath,
+      JSON.stringify({
+        submissions: allSubmissions,
+        lastUpdated: timestamp,
+        totalSubmissions: allSubmissions.length
+      }, null, 2),
       {
         access: 'public',
         addRandomSuffix: false,
       }
     );
 
-    console.log('Submission saved to Blob Storage:', blob.url);
+    console.log('Submission saved to unified Blob Storage:', blob.url);
 
     // Send Slack notification
     try {
       const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
 
       if (slackWebhookUrl) {
+        const transcriptLength = transcript?.length || 0;
         const slackMessage = {
           text: '🎉 New Emmy Submission!',
           blocks: [
@@ -91,6 +126,14 @@ export default async function handler(
                 {
                   type: 'mrkdwn',
                   text: `*Timestamp:*\n${new Date(timestamp).toLocaleString()}`
+                },
+                {
+                  type: 'mrkdwn',
+                  text: `*Conversation:*\n${transcriptLength} messages`
+                },
+                {
+                  type: 'mrkdwn',
+                  text: `*Total Submissions:*\n${allSubmissions.length}`
                 }
               ]
             },
@@ -98,7 +141,7 @@ export default async function handler(
               type: 'section',
               text: {
                 type: 'mrkdwn',
-                text: `<${blob.url}|View in Blob Storage>`
+                text: `<${blob.url}|View All Submissions in Blob Storage>`
               }
             }
           ]
@@ -120,7 +163,9 @@ export default async function handler(
       console.log(`Email: ${email}`);
       console.log(`LinkedIn: ${linkedinUrl}`);
       console.log(`Submission ID: ${submissionId}`);
-      console.log(`Blob Storage: ${blob.url}`);
+      console.log(`Conversation Messages: ${transcript?.length || 0}`);
+      console.log(`Total Submissions: ${allSubmissions.length}`);
+      console.log(`Unified Blob Storage: ${blob.url}`);
       console.log('===========================');
 
     } catch (notificationError) {

@@ -316,6 +316,44 @@ export default function EmmyVoice() {
               {/* Voice Interface */}
               {!showEmailForm && !isConfirmed && (
                 <div className="bg-white rounded-3xl shadow-2xl border border-gray-200 overflow-hidden p-12">
+
+                {/* Instructions Banner - Only show before starting */}
+                {!isListening && conversation.status !== 'connecting' && transcript.length === 0 && (
+                  <div className="mb-8 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-200">
+                    <div className="flex items-start gap-3">
+                      <div className="w-10 h-10 rounded-full bg-blue-500 flex items-center justify-center flex-shrink-0">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-2">How this works</h3>
+                        <ul className="space-y-2 text-sm text-gray-700">
+                          <li className="flex items-start gap-2">
+                            <span className="text-blue-600 mt-0.5">1.</span>
+                            <span>Have a natural <strong>voice conversation</strong> with Emmy about your ideal job</span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="text-blue-600 mt-0.5">2.</span>
+                            <span>When you're done, click <strong>"End & Find Matches"</strong></span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="text-blue-600 mt-0.5">3.</span>
+                            <span>You'll fill out a quick <strong>form with your email and LinkedIn</strong></span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="text-blue-600 mt-0.5">4.</span>
+                            <span>We'll send you up to <strong>5 personalized job matches within 24 hours!</strong></span>
+                          </li>
+                        </ul>
+                        <p className="text-xs text-blue-800 mt-3 bg-blue-100 rounded px-3 py-2">
+                          💡 <strong>Tip:</strong> Don't worry about giving your email verbally - you'll enter it in a form after the conversation!
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Voice Control */}
                 <div className="flex flex-col items-center mb-12">
                   {/* Main Call Button */}
